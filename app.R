@@ -65,6 +65,8 @@ labels <- sprintf(
   ifelse(is.na(aussmap$Resistance), "No known resistance", aussmap$Resistance),
   ifelse(is.na(aussmap$npest), "No known resistance", aussmap$npest)
 ) %>% lapply(htmltools::HTML)
+
+
 # default legend title
 # legend_title <- "For all pests and <br> chemical groups"
 legend_title <- "Resistance cases"
@@ -76,10 +78,29 @@ ui <- fluidPage(
   theme = shinytheme("cyborg"),
   fluidRow(style = "height:500px",
 
+           # sidebarLayout(
+           # sidebarPanel(
+           #   width = 4,
+           #     # style = "height:500px",
+           #     #
+           #     selectizeInput(
+           #       "pest", "Insect pest", choices = sort(unique(pests$PEST)),
+           #       options = list(placeholder = 'Please search for a pest',
+           #                      onInitialize = I('function() { this.setValue(""); }'))
+           #     ),
+           #
+           #     selectizeInput(
+           #       "active", "Active ingredient", choices = sort(unique(pesticide$ACTIVE)),
+           #       options = list(placeholder = 'Please search for an active',
+           #                      onInitialize = I('function() { this.setValue(""); }'))
+           #     # )
+           #   ),
+           # # )
            mainPanel(width = 12, leafletOutput("map", height = 500))
 
   ),
 
+  fluidRow(DT::dataTableOutput("mytable"))
 
 )
 
@@ -88,6 +109,22 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output, session) {
 
+  # observeEvent(input$reset_input, {
+  #   updateSelectizeInput(
+  #     session, inputId = "pest", label = "Insect pest",
+  #     choices = sort(unique(pests$PEST)),
+  #     options = list(placeholder = 'Please search for a pest',
+  #                    onInitialize = I('function() { this.setValue(""); }'))
+  #   )
+  #
+  #   updateSelectizeInput(
+  #     session,inputId = "active", label = "Active ingredient",
+  #     choices = sort(unique(pesticide$ACTIVE)),
+  #     options = list(placeholder = 'Please search for an active',
+  #                    onInitialize = I('function() { this.setValue(""); }'))
+  #   )
+  #
+  # })
   pest <- NULL
   active <- NULL
 
@@ -110,7 +147,7 @@ server <- function(input, output, session) {
   })
 
 
-  # the default leaflet map
+  ## the default leaflet map
   output$map <- renderLeaflet({
     ## Create map object and add tiles and polygon layers to it
     # browser()
@@ -141,13 +178,20 @@ server <- function(input, output, session) {
                 title = legend_title,
                 opacity = 0.5,
                 layerId = "legend",
-                position = "bottomleft") #%>%
+                position = "bottomleft") %>%
+      leafem::addHomeButton(st_bbox(aussmap),
+                            group = "Go full extent",
+                            position = "bottomright",
+                            add = TRUE)
 
   })
 
 
   # updating the map based on click or clear button
   feature <- NULL
+  # observeEvent(input$reset_input, {
+  #   feature <<- NULL
+  # })
 
   observeEvent(input$map_shape_click, {
     feature <<- input$map_shape_click$id
@@ -172,9 +216,12 @@ server <- function(input, output, session) {
 
 
     # no table to show
-    outtable <- resist_data # %>%
-    # mutate()
+    outtable <- resist_data
     mapdata  <- resist_data
+
+    # # get input values
+    # product_input <- ifelse(is.null(input$product), "", input$product)
+    # pest_input <- ifelse(is.null(pest), "", pest)
 
     # filter if pest is selected
     if(is.null(pest) || pest==""){
@@ -189,35 +236,113 @@ server <- function(input, output, session) {
       mapdata <- outtable <- outtable %>%
         filter(SPECIES==species)
 
+      # mapdata <- mapdata %>%
+      #   filter(SPECIES==species)
+
       # update map title
       legend_title <- "Cases for pest"
 
     }
 
-    # filter base on product
-    if(is.null(active) || active==""){
-      # do nothing
-    } else{
-      chem_irac = pesticide %>%
-        filter(ACTIVE==active) %>%
-        pull(CHEM.IRAC) %>%
-        unique()
-
-      outtable = outtable %>%
-        filter(CHEM.IRAC==chem_irac)
-
-      mapdata = mapdata %>%
-        filter(CHEM.IRAC==chem_irac)
-
-      # update map title
-      legend_title <- "Cases for <br> chemical group"
-
-    }
+    # # filter base on product
+    # if(is.null(active) || active==""){
+    #   # do nothing
+    # } else{
+    #   chem_irac = pesticide %>%
+    #     filter(ACTIVE==active) %>%
+    #     pull(CHEM.IRAC) %>%
+    #     unique()
+    #
+    #   outtable = outtable %>%
+    #     filter(CHEM.IRAC==chem_irac)
+    #
+    #   mapdata = mapdata %>%
+    #     filter(CHEM.IRAC==chem_irac)
+    #
+    #   # update map title
+    #   legend_title <- "Cases for <br> chemical group"
+    #
+    # }
 
     # update the legend title
     if((!is.null(active) && active!="") && (!is.null(pest) && pest!="")){
       legend_title <- "For selected pest <br> and chemical group"
     }
+
+    # # filter the table if a region is selected
+    # if(is.null(feature)){
+    #   # do nothing
+    # } else{
+    #   # grepstr = paste(croped_map$NRM_REGION, collapse="|")
+    #   outtable = outtable %>%
+    #     filter(REGION == feature) %>%
+    #     # mutate(REGION = if_else(REGION == feature,
+    #     #                         paste("<b>",REGION,"</b>"), REGION)) %>%
+    #     # # dplyr::select(RESISTANCE, select_fields) %>%
+    #     # # distinct() %>%
+    #     # # group_by(across(c(-REGION))) %>%
+    #     # # summarise(REGION = paste(REGION, collapse="; "), .groups="drop") %>%
+    #     # mutate(regres = grepl(feature, REGION)) %>%
+    #     # arrange(desc(regres)) %>%
+    #     # dplyr::select(-regres) %>%
+    #     identity()
+    #
+    #   # change the colours in the map based on the click
+    #   mapdata <- mapdata %>%
+    #     filter(REGION == feature)
+    # }
+
+
+    ## create empty table but let the map to be with full data
+    if((is.null(pest) || pest=="") && (is.null(active) || active=="") && is.null(feature)){
+      outtable <- outtable %>%
+        dplyr::select(RESISTANCE, select_fields) %>%
+        filter(RESISTANCE == -99999) # create an empty table
+    }
+
+    # add the interactive table
+    output$mytable = DT::renderDataTable({
+      outtable %>%
+        dplyr::select(RESISTANCE, select_fields) %>%
+        distinct() %>%
+        group_by(across(c(-REGION, -SOURCE))) %>%
+        summarise(
+          REGION = paste(unique(REGION), collapse="; "),
+          SOURCE = paste(unique(SOURCE), collapse="; "),
+          .groups="drop") %>%
+        dplyr::select(select_fields) %>%
+        distinct() %>%
+        mutate(SPECIES =
+                 if_else(pest!=SPECIES,
+                         paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
+                         paste("<i>", SPECIES, "</i>"))) %>%
+        DT::datatable(style = 'bootstrap4' ,
+                      escape=FALSE,
+                      options = list(pageLength = 10)
+        ) %>%
+        DT::formatStyle(
+          # table,
+          columns = select_fields,
+          # valueColumns = columns,
+          # target = c("cell", "row"),
+          # fontWeight = NULL,
+          # color = "black"
+          # backgroundColor = "black",
+          # background = "black",
+          # ...
+        ) %>%
+        # DT::formatStyle(
+        #   columns = "LEARN.MORE",
+        #   backgroundColor = "grey"
+        # ) %>%
+        formatStyle(
+          'SEVERITY',
+          backgroundColor = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
+                                       c('white', '#ffff75', "#ffc875", "#ff7575")),
+          color = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
+                             c("white", "black", "black", "black"))
+        )
+    })
 
 
     # update the colour of the map
@@ -242,16 +367,36 @@ server <- function(input, output, session) {
     }
 
 
+    ## update leaflet map with each click
+    if(is.null(feature)){
+      ausmapsub <- aussmap
+    } else{
+      ausmapsub <- aussmap
+      # ausmapsub <- aussmap %>% filter(NRM_REGION == feature) # change this to the colour of map with no label
+    }
+
+    # # re-create palette for the map
+    # mypal <- colorBin(palette = viridis::viridis(option = "D", n = 6, direction = -1),
+    #                   na.color = "white",
+    #                   domain = ausmapsub$Resistance,
+    #                   bins = c(0, 1, 5, 10, 50, 100, 500))
+    # re-create labels
+    # labels <- sprintf(
+    #   "<strong>%s</strong><br/> Resistance cases: %s<br/> Number of pests: %s",
+    #   ausmapsub$NRM_REGION,
+    #   ifelse(is.na(ausmapsub$Resistance), "No known resistance", ausmapsub$Resistance),
+    #   ifelse(is.na(ausmapsub$npest), "No known resistance", ausmapsub$npest)
+    # ) %>% lapply(htmltools::HTML)
+
     labels <- sprintf(
       "<strong>%s</strong><br/> Resistance cases: %s<br/> Pests: %s",
-      aussmap$NRM_REGION,
-      ifelse(is.na(aussmap$Resistance), "No known resistance", aussmap$Resistance),
-      # ifelse(is.na(aussmap$npest), "No known resistance", "test")
-      ifelse(is.null(pest), "All", pest)
+      ausmapsub$NRM_REGION,
+      ifelse(is.na(ausmapsub$Resistance), "No known resistance", ausmapsub$Resistance),
+      ifelse(is.na(ausmapsub$npest), "No known resistance", ifelse(is.null(pest), "All", pest))
     ) %>% lapply(htmltools::HTML)
 
 
-    leafletProxy("map", data = aussmap) %>%
+    leafletProxy("map", data = ausmapsub) %>%
       flyToBounds(bbox[1], bbox[2], bbox[3], bbox[4]) %>%
       clearShapes() %>%
       removeControl(layerId = "legend")  %>%
