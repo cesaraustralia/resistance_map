@@ -33,6 +33,7 @@ pests = pests %>%
 # columns to show in the table
 select_fields <-  c("SPECIES", "REGION", "CHEM.GROUP", "COMMON.ACTIVES",
                     "SEVERITY", "SOURCE")
+main_fields <-  c("REGION", "CHEM.GROUP", "COMMON.ACTIVES", "SEVERITY")
 
 
 #  aggregate the resistance cases per region
@@ -296,7 +297,7 @@ server <- function(input, output, session) {
     ## create empty table but let the map to be with full data
     if((is.null(pest) || pest=="") && (is.null(active) || active=="") && is.null(feature)){
       outtable <- outtable %>%
-        dplyr::select(RESISTANCE, select_fields) %>%
+        dplyr::select(RESISTANCE, main_fields) %>%
         filter(RESISTANCE == -99999) # create an empty table
     }
 
@@ -310,19 +311,19 @@ server <- function(input, output, session) {
           REGION = paste(unique(REGION), collapse="; "),
           SOURCE = paste(unique(SOURCE), collapse="; "),
           .groups="drop") %>%
-        dplyr::select(select_fields) %>%
+        dplyr::select(main_fields) %>%
         distinct() %>%
-        mutate(SPECIES =
-                 if_else(pest!=SPECIES,
-                         paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
-                         paste("<i>", SPECIES, "</i>"))) %>%
+        # mutate(SPECIES =
+        #          if_else(pest!=SPECIES,
+        #                  paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
+        #                  paste("<i>", SPECIES, "</i>"))) %>%
         DT::datatable(style = 'bootstrap4' ,
                       escape=FALSE,
                       options = list(pageLength = 10)
         ) %>%
         DT::formatStyle(
           # table,
-          columns = select_fields,
+          columns = main_fields,
           # valueColumns = columns,
           # target = c("cell", "row"),
           # fontWeight = NULL,
