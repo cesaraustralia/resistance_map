@@ -33,7 +33,7 @@ pests = pests %>%
 # columns to show in the table
 select_fields <-  c("SPECIES", "REGION", "CHEM.GROUP", "COMMON.ACTIVES",
                     "SEVERITY", "SOURCE")
-main_fields <-  c("REGION", "CHEM.GROUP", "COMMON.ACTIVES", "SEVERITY")
+main_fields <-  c("CHEM.GROUP", "COMMON.ACTIVES", "SEVERITY")
 
 
 #  aggregate the resistance cases per region
@@ -180,10 +180,17 @@ server <- function(input, output, session) {
                 opacity = 0.5,
                 layerId = "legend",
                 position = "bottomleft") %>%
-      leafem::addHomeButton(st_bbox(aussmap),
-                            group = "Go full extent",
+      leafem::addHomeButton(ext = st_bbox(aussmap),
+                            group = "Full Extent",
                             position = "bottomright",
                             add = TRUE)
+      # addEasyButton(
+      #   easyButton(
+      #     icon = htmltools::span(class = "star", htmltools::HTML("&starf;")),
+      #     id = 'mapclick',
+      #     onClick = JS('function(x) {print("test");}')#JS("function(btn, map){ map.setZoom(1);}")
+      #   )
+      # )
 
   })
 
@@ -205,6 +212,9 @@ server <- function(input, output, session) {
     # update the app if any of these changes
     input$map_shape_click
     # input$reset_input
+
+    print(input$mapclick)
+
 
     # update the extent based on user's reaction
     if(is.null(feature)){
@@ -270,81 +280,79 @@ server <- function(input, output, session) {
       legend_title <- "For selected pest <br> and chemical group"
     }
 
-    # # filter the table if a region is selected
-    # if(is.null(feature)){
-    #   # do nothing
-    # } else{
-    #   # grepstr = paste(croped_map$NRM_REGION, collapse="|")
-    #   outtable = outtable %>%
-    #     filter(REGION == feature) %>%
-    #     # mutate(REGION = if_else(REGION == feature,
-    #     #                         paste("<b>",REGION,"</b>"), REGION)) %>%
-    #     # # dplyr::select(RESISTANCE, select_fields) %>%
-    #     # # distinct() %>%
-    #     # # group_by(across(c(-REGION))) %>%
-    #     # # summarise(REGION = paste(REGION, collapse="; "), .groups="drop") %>%
-    #     # mutate(regres = grepl(feature, REGION)) %>%
-    #     # arrange(desc(regres)) %>%
-    #     # dplyr::select(-regres) %>%
-    #     identity()
-    #
-    #   # change the colours in the map based on the click
-    #   mapdata <- mapdata %>%
-    #     filter(REGION == feature)
-    # }
-
-
-    ## create empty table but let the map to be with full data
-    if((is.null(pest) || pest=="") && (is.null(active) || active=="") && is.null(feature)){
+    # filter the table if a region is selected
+    if(is.null(feature)){
+      # do nothing
+    } else{
+      # grepstr = paste(croped_map$NRM_REGION, collapse="|")
       outtable <- outtable %>%
-        dplyr::select(RESISTANCE, main_fields) %>%
-        filter(RESISTANCE == -99999) # create an empty table
+        filter(REGION == feature)
+
+      # # change the colours in the map based on the click
+      # mapdata <- mapdata %>%
+      #   filter(REGION == feature)
     }
 
-    # add the interactive table
-    output$mytable = DT::renderDataTable({
-      outtable %>%
-        dplyr::select(RESISTANCE, select_fields) %>%
-        distinct() %>%
-        group_by(across(c(-REGION, -SOURCE))) %>%
-        summarise(
-          REGION = paste(unique(REGION), collapse="; "),
-          SOURCE = paste(unique(SOURCE), collapse="; "),
-          .groups="drop") %>%
-        dplyr::select(main_fields) %>%
-        distinct() %>%
-        # mutate(SPECIES =
-        #          if_else(pest!=SPECIES,
-        #                  paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
-        #                  paste("<i>", SPECIES, "</i>"))) %>%
-        DT::datatable(style = 'bootstrap4' ,
-                      escape=FALSE,
-                      options = list(pageLength = 10)
-        ) %>%
-        DT::formatStyle(
-          # table,
-          columns = main_fields,
-          # valueColumns = columns,
-          # target = c("cell", "row"),
-          # fontWeight = NULL,
-          # color = "black"
-          # backgroundColor = "black",
-          # background = "black",
-          # ...
-        ) %>%
-        # DT::formatStyle(
-        #   columns = "LEARN.MORE",
-        #   backgroundColor = "grey"
-        # ) %>%
-        formatStyle(
-          'SEVERITY',
-          backgroundColor = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
-                                       c('white', '#ffff75', "#ffc875", "#ff7575")),
-          color = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
-                             c("white", "black", "black", "black"))
-        )
-    })
 
+    ## in no pest is selected jut show an empty table
+    if((is.null(pest) || pest=="") && (is.null(active) || active=="") && is.null(feature)){
+      ## create empty table but let the map to be with full data
+      outtable <- outtable %>%
+        dplyr::select(RESISTANCE, select_fields) %>%
+        filter(RESISTANCE == -99999) %>% # create an empty table
+        dplyr::select(main_fields)
+
+      output$mytable = DT::renderDataTable({
+        outtable
+      })
+
+    } else{
+
+      # add the interactive table
+      output$mytable = DT::renderDataTable({
+        outtable %>%
+          dplyr::select(RESISTANCE, select_fields) %>%
+          distinct() %>%
+          group_by(across(c(-REGION, -SOURCE))) %>%
+          summarise(
+            REGION = paste(unique(REGION), collapse="; "),
+            SOURCE = paste(unique(SOURCE), collapse="; "),
+            .groups="drop") %>%
+          dplyr::select(main_fields) %>%
+          distinct() %>%
+          # mutate(SPECIES =
+          #          if_else(pest!=SPECIES,
+          #                  paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
+          #                  paste("<i>", SPECIES, "</i>"))) %>%
+          DT::datatable(style = 'bootstrap4' ,
+                        escape=FALSE,
+                        options = list(pageLength = 10)
+          ) %>%
+          DT::formatStyle(
+            # table,
+            columns = main_fields,
+            # valueColumns = columns,
+            # target = c("cell", "row"),
+            # fontWeight = NULL,
+            # color = "black"
+            # backgroundColor = "black",
+            # background = "black",
+            # ...
+          ) %>%
+          # DT::formatStyle(
+          #   columns = "LEARN.MORE",
+          #   backgroundColor = "grey"
+          # ) %>%
+          formatStyle(
+            'SEVERITY',
+            backgroundColor = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
+                                         c('white', '#ffff75', "#ffc875", "#ff7575")),
+            color = styleEqual(c("NONE", "LOW","MODERATE","HIGH"),
+                               c("white", "black", "black", "black"))
+          )
+      })
+
+    }
 
     # update the colour of the map
     if(all(is.na(mapdata$RESISTANCE))){
