@@ -152,7 +152,9 @@ server <- function(input, output, session) {
   output$map <- renderLeaflet({
     ## Create map object and add tiles and polygon layers to it
     # browser()
-    leaflet(data = aussmap) %>%
+    leaflet(data = aussmap, options = leafletOptions(zoomControl = FALSE,
+                                                     minZoom = 4,
+                                                     maxZoom = 4)) %>%
       addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
       setView(lat = -28, lng = 135, zoom = 4) %>%
@@ -179,11 +181,11 @@ server <- function(input, output, session) {
                 title = legend_title,
                 opacity = 0.5,
                 layerId = "legend",
-                position = "bottomleft") %>%
-      leafem::addHomeButton(ext = st_bbox(aussmap),
-                            group = "Full Extent",
-                            position = "bottomright",
-                            add = TRUE)
+                position = "bottomleft")
+      # leafem::addHomeButton(ext = st_bbox(aussmap),
+      #                       group = "Full Extent",
+      #                       position = "bottomright",
+      #                       add = TRUE)
       # addEasyButton(
       #   easyButton(
       #     icon = htmltools::span(class = "star", htmltools::HTML("&starf;")),
@@ -213,17 +215,17 @@ server <- function(input, output, session) {
     input$map_shape_click
     # input$reset_input
 
-    print(input$mapclick)
+    # print(input$mapclick)
 
 
-    # update the extent based on user's reaction
-    if(is.null(feature)){
-      # return to the full-extent
-      bbox <- as.numeric(sf::st_bbox(aussmap))
-    } else{
-      # get the feature and update the box
-      bbox <- as.numeric(sf::st_bbox(aussmap[aussmap$NRM_REGION == feature, ]))
-    }
+    # # update the extent based on user's reaction
+    # if(is.null(feature)){
+    #   # return to the full-extent
+    #   bbox <- as.numeric(sf::st_bbox(aussmap))
+    # } else{
+    #   # get the feature and update the box
+    #   bbox <- as.numeric(sf::st_bbox(aussmap[aussmap$NRM_REGION == feature, ]))
+    # }
 
 
     # no table to show
@@ -406,7 +408,7 @@ server <- function(input, output, session) {
 
 
     leafletProxy("map", data = ausmapsub) %>%
-      flyToBounds(bbox[1], bbox[2], bbox[3], bbox[4]) %>%
+      # flyToBounds(bbox[1], bbox[2], bbox[3], bbox[4]) %>%
       clearShapes() %>%
       removeControl(layerId = "legend")  %>%
       addPolygons(fillColor = ~ mypal(Resistance),
