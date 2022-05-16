@@ -76,7 +76,7 @@ legend_title <- "Resistance cases"
 # User Interface (UI) -----------------------------------------------------
 # Define UI
 ui <- fluidPage(
-  theme = shinytheme("cyborg"),
+  theme = shinytheme("cerulean"),
   fluidRow(style = "height:500px",
 
            # sidebarLayout(
@@ -105,6 +105,12 @@ ui <- fluidPage(
 
 )
 
+options(DT.options = list(
+  pageLength = 1000,
+  dom = 't'
+  # lengthMenu = 'None'
+  # language = list(search = NULL)
+))
 
 # Server ------------------------------------------------------------------
 # Define server logic
@@ -326,9 +332,10 @@ server <- function(input, output, session) {
           #          if_else(pest!=SPECIES,
           #                  paste("<i>", SPECIES, "</i> <br> <b>", pest, "</b>"),
           #                  paste("<i>", SPECIES, "</i>"))) %>%
-          DT::datatable(style = 'bootstrap4' ,
-                        escape=FALSE,
-                        options = list(pageLength = 10)
+          DT::datatable(#style = 'bootstrap4' ,
+                        # escape=FALSE,
+                        # options =  list(),
+                        # filter = list(position = "top")
           ) %>%
           DT::formatStyle(
             # table,
