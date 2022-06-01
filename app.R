@@ -108,8 +108,6 @@ ui <- fluidPage(
 options(DT.options = list(
   pageLength = 1000,
   dom = 't'
-  # lengthMenu = 'None'
-  # language = list(search = NULL)
 ))
 
 # Server ------------------------------------------------------------------
@@ -334,7 +332,6 @@ server <- function(input, output, session) {
           #                  paste("<i>", SPECIES, "</i>"))) %>%
           DT::datatable(#style = 'bootstrap4' ,
                         # escape=FALSE,
-                        # options =  list(),
                         # filter = list(position = "top")
           ) %>%
           DT::formatStyle(
